@@ -100,5 +100,4 @@ shared_key = encap_result["shared_key"] # 256-bit symmetric key for AES
 
 Distributed under the MIT License. See `LICENSE` for more information.
 
-```
 
