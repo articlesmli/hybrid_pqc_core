@@ -1,3 +1,8 @@
+"""
+Hybrid Key Encapsulation Mechanism (Hybrid KEM)
+Combines Classical X25519 (ECDH) with NIST-standardized Lattice-Based PQC (ML-KEM-768).
+"""
+
 import os
 import base64
 from cryptography.hazmat.primitives.asymmetric import x25519
@@ -24,8 +29,9 @@ class HybridKEM:
         ephemeral_public = ephemeral_private.public_key()
         classical_shared_secret = ephemeral_private.exchange(peer_classical_pub)
         
+        # Real liboqs encapsulation uses encap_secret()
         sender_kem = oqs.KeyEncapsulation(self.pqc_algorithm)
-        pqc_ciphertext, pqc_shared_secret = sender_kem.encapsulate(peer_pqc_pub)
+        pqc_ciphertext, pqc_shared_secret = sender_kem.encap_secret(peer_pqc_pub)
         
         combined_entropy = classical_shared_secret + pqc_shared_secret
         final_symmetric_key = HKDF(
@@ -44,8 +50,9 @@ class HybridKEM:
     def decapsulate(self, ephemeral_classical_pub: x25519.X25519PublicKey, pqc_ciphertext: bytes) -> bytes:
         classical_shared_secret = self.classical_private_key.exchange(ephemeral_classical_pub)
         
+        # Real liboqs decapsulation uses decap_secret()
         receiver_kem = oqs.KeyEncapsulation(self.pqc_algorithm, secret_key=self.pqc_keypair["private_key"])
-        pqc_shared_secret = receiver_kem.decapsulate(pqc_ciphertext)
+        pqc_shared_secret = receiver_kem.decap_secret(pqc_ciphertext)
         
         combined_entropy = classical_shared_secret + pqc_shared_secret
         final_symmetric_key = HKDF(
@@ -57,8 +64,8 @@ class HybridKEM:
         
         return final_symmetric_key
 
-    # --- Serialization Helpers as Class Methods ---
-    
+    # --- Serialization Helpers ---
+
     def serialize_public_keys(self) -> dict:
         """Serializes this instance's public keys into Base64 strings for JSON transmission."""
         classical_bytes = self.classical_public_key.public_bytes(
